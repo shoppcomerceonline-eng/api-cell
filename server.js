@@ -352,64 +352,102 @@ app.post("/reject-user", async (req, res) => {
 });
 
 // ==================
-// 🤖 BOT TELEGRAM
+// 🤖 BOT TELEGRAM (Webhooks para nube)
 // ==================
 let bot;
-let botReconnecting = false;
+let botReady = false;
 
 function startBot() {
-  if (botReconnecting) return;
-  
   try {
-    // Detener cualquier polling anterior
-    if (bot) {
-      try { bot.stopPolling(); } catch(e) {}
+    const TOKEN = process.env.BOT_TOKEN;
+    if (!TOKEN) {
+      console.log("⚠️ BOT_TOKEN no configurado");
+      return;
     }
     
-    bot = new TelegramBot(process.env.BOT_TOKEN, { 
-      polling: true,
-      filepath: false
-    });
-    console.log("✅ Bot de Telegram conectado");
-    botReconnecting = false;
+    bot = new TelegramBot(TOKEN, { polling: false });
+    console.log("✅ Bot de Telegram inicializado");
     
-    // Manejo de errores de polling
-    bot.on("polling_error", (err) => {
-      console.error("⚠️ Error de polling:", err.message);
+    // Configurar webhook automáticamente
+    const webhookUrl = process.env.RENDER_EXTERNAL_URL || process.env.WEBHOOK_URL;
+    
+    if (webhookUrl) {
+      const webhookPath = `/webhook/${TOKEN}`;
+      const fullUrl = `${webhookUrl}${webhookPath}`;
       
-      // Error 409 significa que hay otra instancia corriendo
-      if (err.message.includes("409 Conflict")) {
-        console.log("⚠️ Otra instancia del bot está corriendo. Deteniendo...");
-        botReconnecting = true;
-        return;
-      }
-      
-      // Solo reconectar si no es error 409
-      if (!botReconnecting && (err.message.includes("ECONNRESET") || err.message.includes("ETIMEDOUT"))) {
-        botReconnecting = true;
-        console.log("🔄 Reconectando bot en 10 segundos...");
-        setTimeout(() => {
-          try { 
-            if (bot) bot.stopPolling(); 
-          } catch(e) {}
-          botReconnecting = false;
-          startBot();
-        }, 10000);
-      }
-    });
+      // Configurar el webhook en Telegram
+      bot.setWebhook(fullUrl).then(() => {
+        console.log("✅ Webhook configurado:", fullUrl);
+        botReady = true;
+      }).catch(err => {
+        console.log("⚠️ Error configurando webhook:", err.message);
+        // Intentar con polling como respaldo
+        tryPolling();
+      });
+    } else {
+      // Sin URL de webhook, usar polling local
+      tryPolling();
+    }
     
   } catch (err) {
     console.error("❌ Error Bot Telegram:", err.message);
-    if (!botReconnecting) {
-      botReconnecting = true;
-      setTimeout(() => {
-        botReconnecting = false;
-        startBot();
-      }, 15000);
-    }
   }
 }
 
+function tryPolling() {
+  try {
+    const TOKEN = process.env.BOT_TOKEN;
+    if (TOKEN) {
+      const pollingBot = new TelegramBot(TOKEN, { polling: true });
+      bot = pollingBot;
+      console.log("✅ Bot de Telegram conectado (polling)");
+      botReady = true;
+    }
+  } catch (err) {
+    console.error("❌ Error al iniciar polling:", err.message);
+  }
+}
+
+// ==================
+// 📥 RUTAS DE WEBHOOK
+// ==================
+const BOT_TOKEN = process.env.BOT_TOKEN;
+
+// Webhook con token del bot
+app.post(`/webhook/${BOT_TOKEN}`, express.json(), (req, res) => {
+  if (!bot) {
+    return res.status(500).send("Bot no inicializado");
+  }
+  
+  const { message, callback_query } = req.body;
+  
+  if (message) {
+    bot.emit("message", message);
+  } else if (callback_query) {
+    bot.emit("callback_query", callback_query);
+  }
+  
+  res.send("OK");
+});
+
+// Webhook público
+app.post("/webhook", express.json(), (req, res) => {
+  if (!bot) {
+    return res.status(500).send("Bot no inicializado");
+  }
+  
+  const { message, callback_query } = req.body;
+  
+  if (message) {
+    bot.emit("message", message);
+  } else if (callback_query) {
+    bot.emit("callback_query", callback_query);
+  }
+  
+  res.send("OK");
+});
+
+// Iniciar el bot
 startBot();
 
 // 📝 Flujo de registro por pasos
@@ -1062,7 +1100,28 @@ app.get("/", (req, res) => {
 });
 
 // ==================
-// 🚀 SERVIDOR
+// � WEBHOOK PARA TELEGRAM
+// ==================
+app.post("/webhook", express.json(), (req, res) => {
+  if (!bot) {
+    return res.status(500).send("Bot no inicializado");
+  }
+  
+  const { message } = req.body;
+  if (message) {
+    // Procesar el mensaje como si fuera del polling
+    const chatId = message.chat.id;
+    const text = message.text;
+    
+    // Emitir evento de mensaje para que lo procese el código existente
+    bot.emit("message", message);
+  }
+  
+  res.send("OK");
+});
+
+// ==================
+// �🚀 SERVIDOR
 // ==================
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
