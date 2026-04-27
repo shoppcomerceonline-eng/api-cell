@@ -1,0 +1,27 @@
+{
+  "users": [
+    {
+      "_id": "1777284182351",
+      "nombre": "pepe",
+      "pais": "cuba",
+      "estado": "la habana",
+      "telefono": "+525611211170",
+      "email": "createmastercard0@gmail.com",
+      "password": "$2a$10$n7rBqVG29bSMSPvUdH00POSJ4aO/e3QyJRavAd678uwK0nhFYgyVC",
+      "isBlocked": false,
+      "otp": null,
+      "otpExp": null,
+      "createdAt": "2026-04-27T10:03:02.351Z",
+      "isActive": true
+    },
+    {
+      "_id": "1777286974651",
+      "telefono": "+525511112222",
+      "isBlocked": false,
+      "otp": "192801",
+      "otpExp": "2026-04-27T10:54:34.651Z",
+      "createdAt": "2026-04-27T10:49:34.651Z",
+      "isActive": true
+    }
+  ]
+}
