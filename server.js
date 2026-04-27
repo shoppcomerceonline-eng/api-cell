@@ -1,4 +1,4 @@
-require("dotenv").config();
+﻿require("dotenv").config();
 const express = require("express");
 const bcrypt = require("bcryptjs");
 const cors = require("cors");
@@ -411,37 +411,28 @@ function tryPolling() {
 // ==================
 // 📥 RUTAS DE WEBHOOK
 // ==================
-const BOT_TOKEN = process.env.BOT_TOKEN;
 
-// Webhook con token del bot
-app.post(`/webhook/${BOT_TOKEN}`, express.json(), (req, res) => {
-  if (!bot) {
-    return res.status(500).send("Bot no inicializado");
-  }
-  
-  const { message, callback_query } = req.body;
-  
-  if (message) {
-    bot.emit("message", message);
-  } else if (callback_query) {
-    bot.emit("callback_query", callback_query);
-  }
-  
-  res.send("OK");
-});
-
-// Webhook público
+// Webhook principal con el token del bot
 app.post("/webhook", express.json(), (req, res) => {
+  console.log("📥 Webhook recibido:", JSON.stringify(req.body).substring(0, 100));
+  
   if (!bot) {
+    console.log("❌ Bot no inicializado");
     return res.status(500).send("Bot no inicializado");
   }
   
-  const { message, callback_query } = req.body;
+  const { message, callback_query, edited_message } = req.body;
   
   if (message) {
+    console.log("📨 Mensaje recibido de:", message.chat?.id);
     bot.emit("message", message);
   } else if (callback_query) {
+    console.log("🔘 Callback query recibido");
     bot.emit("callback_query", callback_query);
+  } else if (edited_message) {
+    console.log("✏️ Mensaje editado");
+  } else {
+    console.log("⚠️ Tipo de update no reconocido");
   }
   
   res.send("OK");
@@ -1099,29 +1090,6 @@ app.get("/", (req, res) => {
   });
 });
 
-// ==================
-// � WEBHOOK PARA TELEGRAM
-// ==================
-app.post("/webhook", express.json(), (req, res) => {
-  if (!bot) {
-    return res.status(500).send("Bot no inicializado");
-  }
-  
-  const { message } = req.body;
-  if (message) {
-    // Procesar el mensaje como si fuera del polling
-    const chatId = message.chat.id;
-    const text = message.text;
-    
-    // Emitir evento de mensaje para que lo procese el código existente
-    bot.emit("message", message);
-  }
-  
-  res.send("OK");
-});
-
-// ==================
-// �🚀 SERVIDOR
 // ==================
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
