@@ -1004,6 +1004,17 @@ Ya puedes usar todos los servicios del bot.`,
 }
 
 // ==================
+// 🌐 RUTA PRINCIPAL
+// ==================
+app.get("/", (req, res) => {
+  res.json({ 
+    msg: "API-CELL Bot de Telegram", 
+    status: "Online",
+    version: "1.0.0"
+  });
+});
+
+// ==================
 // 🚀 SERVIDOR
 // ==================
 const PORT = process.env.PORT || 3000;
