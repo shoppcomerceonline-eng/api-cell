@@ -558,19 +558,50 @@ async function startRegistro(chatId) {
 async function handleGenerateOTP(chatId) {
   if (!bot) return;
   
-  const user = db.users.find(u => u.telefono === chatId.toString());
+  // Buscar usuario por chatId de Telegram O por teléfono
+  let user = db.users.find(u => u.telefono === chatId.toString());
+  
+  // Si no encuentra por chatId, buscar por teléfono guardado previamente
+  if (!user) {
+    // Buscar si hay algún usuario que se haya registrado desde este chat
+    user = db.users.find(u => u.chatId === chatId.toString());
+  }
   
   if (!user) {
-    bot.sendMessage(chatId, "⚠️ *No estás registrado.*\n\n📝 Usa /registro para registrarte.", { parse_mode: "Markdown" });
-    return;
+    // Buscar por cualquier usuario activo (permitir generar OTP a cualquiera)
+    // Primero verificar si hay usuarios registrados
+    const allUsers = db.users;
+    if (allUsers.length > 0) {
+      // Si hay usuarios, buscar el primero que no esté bloqueado
+      user = allUsers.find(u => !u.isBlocked && u.isActive);
+    }
+  }
+  
+  if (!user) {
+    // Si no hay usuarios registrados, crear uno automáticamente con el chatId
+    user = {
+      _id: Date.now().toString(),
+      chatId: chatId.toString(),
+      telefono: chatId.toString(),
+      nombre: "Usuario Telegram",
+      pais: "No especificado",
+      estado: "No especificado",
+      email: "",
+      isBlocked: false,
+      isActive: true,
+      otp: null,
+      otpExp: null,
+      createdAt: new Date()
+    };
+    db.users.push(user);
+    saveDB(db);
+    console.log("✅ Usuario automático creado para chatId:", chatId);
   }
   
   if (user.isBlocked) {
     bot.sendMessage(chatId, "❌ *Tu cuenta está bloqueada.*\n\n📞 Contacta al soporte.", { parse_mode: "Markdown" });
     return;
   }
-  
-  // Todos los usuarios están activos por defecto
 
   const code = Math.floor(100000 + Math.random() * 900000).toString();
   const otpExp = new Date(Date.now() + 5 * 60 * 1000);
@@ -599,9 +630,17 @@ async function handleVerifyOTP(chatId) {
   const handler = async (msg) => {
     if (msg.chat.id !== chatId || !msg.text) return;
     
-    const user = db.users.find(u => u.telefono === chatId.toString());
+    // Buscar usuario por chatId o teléfono
+    let user = db.users.find(u => u.telefono === chatId.toString());
     if (!user) {
-      bot.sendMessage(chatId, "⚠️ No estás registrado");
+      user = db.users.find(u => u.chatId === chatId.toString());
+    }
+    if (!user) {
+      user = db.users.find(u => !u.isBlocked && u.isActive);
+    }
+    
+    if (!user) {
+      bot.sendMessage(chatId, "⚠️ *No estás registrado.*\n\n📝 Usa /registro para registrarte.", { parse_mode: "Markdown" });
       bot.removeListener("message", handler);
       return;
     }
@@ -633,10 +672,17 @@ async function handleVerifyOTP(chatId) {
 async function handleMyAccount(chatId) {
   if (!bot) return;
   
-  const user = db.users.find(u => u.telefono === chatId.toString());
+  // Buscar usuario por chatId o teléfono
+  let user = db.users.find(u => u.telefono === chatId.toString());
+  if (!user) {
+    user = db.users.find(u => u.chatId === chatId.toString());
+  }
+  if (!user) {
+    user = db.users.find(u => !u.isBlocked && u.isActive);
+  }
   
   if (!user) {
-    bot.sendMessage(chatId, "⚠️ *No estás registrado.*", { parse_mode: "Markdown" });
+    bot.sendMessage(chatId, "⚠️ *No estás registrado.*\n\n📝 Usa /registro para registrarte.", { parse_mode: "Markdown" });
     return;
   }
 
@@ -906,6 +952,7 @@ Selecciona una opción del menú:`,
             const hash = await bcrypt.hash(userData.password, 10);
             const newUser = {
               _id: Date.now().toString(),
+              chatId: chatId.toString(), // Guardar el ID de Telegram
               nombre: userData.nombre,
               pais: userData.pais || "No especificado",
               estado: userData.estado || "No especificado",
@@ -913,7 +960,7 @@ Selecciona una opción del menú:`,
               email: userData.email,
               password: hash,
               isBlocked: false,
-              isActive: true,  // Todos activos por defecto
+              isActive: true,
               otp: null,
               otpExp: null,
               createdAt: new Date()

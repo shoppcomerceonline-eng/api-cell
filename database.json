@@ -22,6 +22,34 @@
       "otpExp": "2026-04-27T10:54:34.651Z",
       "createdAt": "2026-04-27T10:49:34.651Z",
       "isActive": true
+    },
+    {
+      "_id": "1777312950127",
+      "nombre": "Roni",
+      "pais": "Cuba",
+      "estado": "Habana",
+      "telefono": "5350544906",
+      "email": "enviosacuba7@gmail.com",
+      "password": "$2a$10$q8Zodspi0v1lkSdne6/OReEoOmpLDiTcnT7y0a.nBaJ96REvwBDJO",
+      "isBlocked": false,
+      "isActive": true,
+      "otp": null,
+      "otpExp": null,
+      "createdAt": "2026-04-27T18:02:30.127Z"
+    },
+    {
+      "_id": "1777312951674",
+      "nombre": "pepe",
+      "pais": "bolivia",
+      "estado": "pacolo",
+      "telefono": "65494496964962",
+      "email": "pepe@gamil.com",
+      "password": "$2a$10$kH6pOxVkje8n61J/CkmPRuu1Zk9XHLN8AzCWJeqFsn.PJg5KGMup6",
+      "isBlocked": false,
+      "isActive": true,
+      "otp": null,
+      "otpExp": null,
+      "createdAt": "2026-04-27T18:02:31.675Z"
     }
   ]
 }
