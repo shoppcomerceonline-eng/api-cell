@@ -413,7 +413,7 @@ function tryPolling() {
 // ==================
 
 // Webhook principal con el token del bot
-app.post("/webhook", express.json(), (req, res) => {
+app.post("/webhook/:token?", express.json(), (req, res) => {
   console.log("📥 Webhook recibido:", JSON.stringify(req.body).substring(0, 100));
   
   if (!bot) {
